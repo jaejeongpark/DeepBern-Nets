@@ -444,6 +444,7 @@ if __name__ == "__main__":
         _, benchmark_testloader = load_mnist(
             batch_size=cfg.TRAIN.BATCH_SIZE, flatten=is_FC_model
         )
+    
 
     print("==>>> Trainig set size = {}".format(len(trainloader.dataset)))
     print("==>>> Test set size = {}".format(len(testloader.dataset)))
@@ -451,14 +452,14 @@ if __name__ == "__main__":
         "==>>> Robustness Test set size = {}".format(len(benchmark_testloader.dataset))
     )
 
-    in_shape = torch.tensor(next(iter(trainloader))[0][0].shape)
+    in_shape = torch.tensor(next(iter(trainloader))[0][0].shape) # next(iter(trainloader))[0][#] are the #-th input images / next(iter(trainloader))[1][#] are the #-th labels
     num_outs = len(trainloader.dataset.classes)
     # layer_sizes = [num_inputs, 512,256,128,64, num_outs]
     if cfg.MODEL.TYPE == "FC":
-        layer_sizes = [in_shape.item()] + cfg.MODEL.HIDDEN_LAYERS + [num_outs]
+        layer_sizes = [in_shape.item()] + cfg.MODEL.HIDDEN_LAYERS + [num_outs] # [784, 100, 100, 100, 10] for MNIST (list + list = concatenation of lists)
         in_bounds = torch.concat(
             (torch.zeros(in_shape, 1), torch.ones(in_shape, 1)), dim=-1
-        ).to(device)
+        ).to(device) 
         model = FCModel(
             layer_sizes,
             degree=cfg.MODEL.DEGREE,
@@ -509,7 +510,7 @@ if __name__ == "__main__":
     else:
         optimizer = optim.SGD(optim_params, lr=init_lr, weight_decay=w_decay)
 
-    start_epoch = 0
+    start_epoch = 0 # epoch to start training from (0 if training from scratch)
     if cfg.CHECKPOINT.LOAD:
         # Load model
         if cfg.CHECKPOINT.PATH_TO_CKPT:
@@ -523,14 +524,31 @@ if __name__ == "__main__":
         model.load_state_dict(ckpt["model_state_dict"])
 
     bounding_method = cfg.ROBUSTNESS.BOUNDING_METHOD
-    lirpa_model = None
+    lirpa_model = None # LIRPA model for IBP (under lower upper bounds of input under perturbations of the input certifying the output of the model does not drastically change)
     # if "IBP" in bounding_method:
     #     model.eval()
     #     dummy_input = next(iter(trainloader))[0]
     #     lirpa_model = BoundedModule(model, dummy_input)
     #     model.train()
 
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss() # Classification loss
+
+    # regression loss functions (for continuous target values)
+    # criterion = nn.MSELoss() # Regression loss
+    criterion = nn.L1Loss()  # Mean Absolute Error (L1 Loss)
+    # criterion = nn.SmoothL1Loss()  # Huber Loss 
+    # criterion = nn.PoissonNLLLoss()  # Poisson NLL Loss for count regression
+    # criterion = nn.KLDivLoss()  # Kullback-Leibler Divergence Loss
+    # class CustomLoss(nn.Module):
+    #     def __init__(self):
+    #         super(CustomLoss, self).__init__()
+        
+    #     def forward(self, output, target):
+    #         loss = torch.mean((output - target)**2) + torch.mean(torch.abs(output - target))
+    #         return loss
+
+    # criterion = CustomLoss()  # Custom loss combining MSE and MAE
+
     train(
         model,
         trainloader,
@@ -543,5 +561,5 @@ if __name__ == "__main__":
         start_epoch=start_epoch,
         benchmark_loader=benchmark_testloader,
     )
-    data_point = trainloader.dataset[1][0].to(device)
+    data_point = trainloader.dataset[1][0].to(device) # get the first data point from the training set
     model(data_point.unsqueeze(0))

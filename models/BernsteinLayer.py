@@ -7,15 +7,15 @@ class BernsteinLayer(nn.Module):
         super().__init__()
         self.degree = degree
         self.in_shape = in_shape
-        _basis_indices_tensor = torch.arange(degree + 1).reshape((-1, degree + 1))
+        _basis_indices_tensor = torch.arange(degree + 1).reshape((-1, degree + 1)) # shape : (1,degree+1) content  :  [0,1,...,degree]
         _deg_tensor = torch.tensor([degree]).reshape(-1, 1)
         nCk_tensor = self.binom(_deg_tensor, _basis_indices_tensor)
         input_bounds = torch.zeros((*in_shape, 2))
-        self.register_buffer("input_bounds", input_bounds)
+        self.register_buffer("input_bounds", input_bounds) # register_buffer is used to store the tensor in the model (nn.model) but not as a learning parameter
         self.register_buffer("_basis_indices", _basis_indices_tensor)
         self.register_buffer("_deg_tensor", _deg_tensor)
         self.register_buffer("nCk", nCk_tensor)
-        bern_coeffs = torch.ones(*in_shape, degree + 1)
+        bern_coeffs = torch.ones(*in_shape, degree + 1) # for each polynomial in the input_shape, we have degree+1 coefficients
         init_std = torch.ones_like(bern_coeffs) / torch.tensor(in_shape).prod()
         self.bern_coeffs = nn.Parameter(
             bern_coeffs * torch.normal(torch.zeros_like(bern_coeffs), init_std)

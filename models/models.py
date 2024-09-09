@@ -16,23 +16,24 @@ class FCModel(nn.Module):
 
         layers = []
         for i, l_size in enumerate(layer_sizes[:-1]):
-            layers.append(nn.Linear(layer_sizes[i], layer_sizes[i + 1]))
+            layers.append(nn.Linear(layer_sizes[i], layer_sizes[i + 1])) # nn.Linear(784, 100) -> nn.Linear(100, 100) -> nn.Linear(100, 10) 
             if i < (len(layer_sizes) - 2):
                 if act == "bern":
-                    BATCH_NORM = False
+                    BATCH_NORM = False 
                     SIGMOID = False
                     if BATCH_NORM:
-                        layers.append(nn.BatchNorm1d(layer_sizes[i + 1], affine=False))
+                        layers.append(nn.BatchNorm1d(layer_sizes[i + 1], affine=False)) # usually for fully connected layers or time-series data  
                     if SIGMOID:
                         layers.append(nn.Sigmoid())
                     layers.append(BernsteinLayer([layer_sizes[i + 1]], degree))
                 else:
                     layers.append(nn.ReLU())
+        layers.append(nn.Linear()) # Regression model need linear layer at the end
 
         if last_bern:
             layers.append(BernsteinLayer([layer_sizes[-1]], 1))
         self.input_bounds = input_bounds
-        self.net = nn.Sequential(*layers)
+        self.net = nn.Sequential(*layers) # Unpack the list of layers and pass it to the nn.Sequential constructor
         self.layers = layers
 
     def forward_with_bounds(self, x):
